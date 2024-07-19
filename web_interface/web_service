@@ -1,0 +1,195 @@
+from flask import Flask, request, jsonify, render_template
+from Service import scan_network, fetch_temperature, set_fan_speed  # Adjust imports based on your actual script setup
+
+from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask_wtf import FlaskForm
+from wtforms import IntegerField, SubmitField, StringField
+from wtforms.validators import DataRequired, IPAddress
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your_secret_key'  # Change to a real secret key in production
+
+default_settings = {
+    "start_ip": '10.11.1.42',
+    "end_subnet": '10.11.6',
+    "last_host_digit": 70,
+    "temp_low": 55,
+    "temp_high": 63,
+    "fan_speed_low": 3,
+    "fan_speed_high": 5,
+    "fan_speed_normal": 4
+}
+
+class FanControlForm(FlaskForm):
+    start_ip = StringField('Start IP', validators=[DataRequired(), IPAddress()])
+    end_subnet = StringField('End Subnet IP', validators=[DataRequired()])
+    last_host_digit = IntegerField('Last Host Digit', validators=[DataRequired()])  # Ensure this line is included
+    # hosts = StringField('Hosts (comma-separated IPs)', validators=[DataRequired()])
+    temp_low = IntegerField('Temperature Low Threshold (°C)', validators=[DataRequired()])
+    temp_high = IntegerField('Temperature High Threshold (°C)', validators=[DataRequired()])
+    fan_speed_low = IntegerField('Fan Speed for Low Temp', validators=[DataRequired()])
+    fan_speed_high = IntegerField('Fan Speed for High Temp', validators=[DataRequired()])
+    fan_speed_normal = IntegerField('Fan Speed for Normal Temp', validators=[DataRequired()])
+    submit = SubmitField('Set Parameters')
+
+class NetworkScanForm(FlaskForm):
+    start_ip = StringField('Start IP Address', validators=[DataRequired(), IPAddress()])
+    end_ip = StringField('End IP Address', validators=[DataRequired(), IPAddress()])
+    submit = SubmitField('Scan Network')
+
+# @app.route('/', methods=['GET', 'POST'])
+# def index():
+#     form = FanControlForm()
+#     if form.validate_on_submit():
+#         session['settings'] = {
+#             "hosts": [host.strip() for host in form.hosts.data.split(',')],
+#             "temp_low": form.temp_low.data,
+#             "temp_high": form.temp_high.data,
+#             "fan_speed_low": form.fan_speed_low.data,
+#             "fan_speed_high": form.fan_speed_high.data,
+#             "fan_speed_normal": form.fan_speed_normal.data
+#         }
+#         flash('Settings updated successfully! Starting monitoring...')
+#         return redirect(url_for('monitor'))
+#     return render_template('index.html', form=form)
+
+# @app.route('/', methods=['GET', 'POST'])
+# def configure():
+#     form = FanControlForm()
+#     if form.validate_on_submit():
+#         try:
+#             # Store the form data in the session
+#             session['settings'] = {
+#                 "start_ip": form.start_ip.data,
+#                 "end_subnet": form.end_subnet.data,
+#                 "last_host_digit": form.last_host_digit.data,
+#                 "temp_low": form.temp_low.data,
+#                 "temp_high": form.temp_high.data,
+#                 "fan_speed_low": form.fan_speed_low.data,
+#                 "fan_speed_high": form.fan_speed_high.data,
+#                 "fan_speed_normal": form.fan_speed_normal.data
+#             }
+#             flash('Configuration saved successfully! Starting monitoring...', 'success')
+#             return redirect(url_for('monitor'))
+#         except Exception as e:
+#             flash(f'Failed to save configuration: {e}', 'error')
+#             return render_template('index.html', form=form)
+
+#     # Pre-fill the form with data from the session if available
+#     if 'settings' in session:
+#         form.process(data=session['settings'])
+
+#     return render_template('index.html', form=form)
+@app.route('/', methods=['GET', 'POST'])
+def configure():
+    form = FanControlForm()
+    if form.validate_on_submit():
+        # Store the form data in the session
+        session['settings'] = form.data  # This captures all form data
+        flash('Configuration saved successfully! Starting monitoring...')
+        return redirect(url_for('monitor'))
+    
+    # Pre-fill the form with session data if available, otherwise use defaults
+    if 'settings' in session:
+        form_data = session['settings']
+    else:
+        form_data = default_settings  # Use default values if no session data
+
+    form.process(data=form_data)  # This pre-fills the form
+
+    return render_template('index.html', form=form)
+
+@app.route('/ping_status')
+def ping_status():
+    # Fetch the latest list of hosts and their status, which could be stored in session or database
+    # Assuming hosts are stored in the session for simplicity
+    hosts = session.get('hosts', [])
+    return render_template('table.html', hosts=hosts)
+
+@app.route('/monitor', methods=['GET', 'POST'])
+def monitor():
+    # Retrieve settings from session, ensuring some default values if none found
+    settings = session.get('settings', {
+        'temp_high': 63,  # Default high temperature threshold
+        'temp_low': 55,   # Default low temperature threshold
+        'fan_speed_normal': 3,  # Default normal fan speed
+        'fan_speed_high': 5,    # Default high fan speed
+        'fan_speed_low': 4      # Default low fan speed
+    })
+
+    # Fetch IP range and scan network
+    start_ip = settings.get('start_ip', '10.11.1.42')  # Default start IP
+    end_subnet = settings.get('end_subnet', '10.11.1')
+    last_host_digit = settings.get('last_host_digit', 70)  # Default last host digit
+
+    hosts = scan_network(start_ip, end_subnet, last_host_digit)  # Adjust your scan_network function to handle the range directly
+    session['hosts'] = ['10.11.1.42', '10.11.1.43']   # change
+
+    # Fetch temperatures from the active hosts
+    temperatures = [fetch_temperature(host) for host in hosts if host]
+    
+    if not temperatures:
+        return jsonify({'error': 'No valid temperature data found'}), 400
+
+    # Calculate the average temperature
+    average_temp = sum(temperatures) / len(temperatures)
+
+    # Determine fan speed based on average temperature
+    if average_temp >= settings['temp_high']:
+        fan_speed = settings['fan_speed_high']
+    elif average_temp >= settings['temp_low']:
+        fan_speed = settings['fan_speed_low']
+    else:
+        fan_speed = settings['fan_speed_normal']
+
+    # Set the fan speed using the determined value
+    set_fan_speed(fan_speed)
+
+    session['last_fan_speed'] = fan_speed  # Store the last set fan speed in the session
+    # Return the results as JSON
+    flash(f'Fan speed set to {fan_speed}. Monitoring updated.')
+    return redirect(url_for('configure'))
+
+@app.route('/monitor_status')
+def monitor_status():
+    # Access monitoring information, possibly from session or a database
+    monitoring_info = session.get('monitoring_info', 'No recent monitoring data.')
+    return render_template('monitor_status.html', monitoring_info=monitoring_info)
+
+
+@app.route('/table', methods=['GET', 'POST'])
+def table():
+    form = NetworkScanForm()
+    if form.validate_on_submit():
+        start_ip = form.start_ip.data
+        end_ip = form.end_ip.data
+        # Store these for access by the AJAX call
+        session['start_ip'] = start_ip
+        session['end_ip'] = end_ip
+        return redirect(url_for('table'))  # Stay on the page to show the table
+    return render_template('table.html', form=form)
+
+@app.route('/scan', methods=['GET'])
+def scan():
+    # Example endpoint to initiate scanning
+    start_ip = session.get('start_ip')
+    end_ip = session.get('end_ip')
+    hosts = scan_network('start_ip', '10.11.1', 45)
+    return jsonify(hosts)
+
+@app.route('/temperature', methods=['POST'])
+def temperature():
+    # Example endpoint to fetch temperature
+    ip = request.json.get('ip')
+    temp = fetch_temperature(ip)
+    return jsonify({'temperature': temp})
+
+@app.route('/set_speed', methods=['POST'])
+def speed():
+    # Example endpoint to set fan speed
+    speed = request.json.get('speed')
+    print(speed)
+    return jsonify({'status': 'Speed set successfully'}, {'speed': speed})
+
+if __name__ == '__main__':  
+    app.run(debug=True, host='0.0.0.0', port=5000)

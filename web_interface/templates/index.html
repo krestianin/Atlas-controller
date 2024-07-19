@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('configure') }}">Home</a></li>
+            <li><a href="{{ url_for('table') }}">Ping Status</a></li>
+        </ul>
+    </nav>
+    <head>
+        <meta charset="UTF-8">
+        <title>Fan Speed Control Setup</title>
+        <!-- Include Bootstrap CSS from CDN -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    </head>
+    <body>
+        <h1  style="padding: 20px; padding-left: 43%;">Fan Speed Controller</h1>
+
+        <div class="container mt-5">
+            <h1 class="mb-4">Configure Temperature Thresholds and Fan Speeds</h1>
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <ul>
+                    {% for message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+            <form method="post" class="needs-validation" novalidate>
+                {{ form.hidden_tag() }}
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.start_ip.label(class="form-label") }}
+                        {{ form.start_ip(class="form-control") }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.end_subnet.label(class="form-label") }}
+                        {{ form.end_subnet(class="form-control") }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.last_host_digit.label(class="form-label") }}
+                        {{ form.last_host_digit(class="form-control") }}
+                    </div>
+                    <div class="form-group col-md-6">
+                        {{ form.temp_low.label(class="form-label") }}
+                        {{ form.temp_low(class="form-control", required=True) }}
+                        {% for error in form.temp_low.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group col-md-6">
+                        {{ form.temp_high.label(class="form-label") }}
+                        {{ form.temp_high(class="form-control", required=True) }}
+                        {% for error in form.temp_high.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-md-4">
+                        {{ form.fan_speed_low.label(class="form-label") }}
+                        {{ form.fan_speed_low(class="form-control", required=True) }}
+                        {% for error in form.fan_speed_low.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group col-md-4">
+                        {{ form.fan_speed_normal.label(class="form-label") }}
+                        {{ form.fan_speed_normal(class="form-control", required=True) }}
+                        {% for error in form.fan_speed_normal.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group col-md-4">
+                        {{ form.fan_speed_high.label(class="form-label") }}
+                        {{ form.fan_speed_high(class="form-control", required=True) }}
+                        {% for error in form.fan_speed_high.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Set Parameters</button>
+            </form>
+        </div>
+       
+
+
+        <div class="container mt-5">
+            <h2 class="mb-3">Network Operations</h2>
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <button class="btn btn-primary" onclick="scanNetwork()">Scan Network</button>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <input type="text" id="ip" placeholder="Enter IP" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-success" onclick="getTemperature()">Get Temperature</button>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <input type="number" id="speed" placeholder="Set Fan Speed" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-warning" onclick="setFanSpeed()">Set Fan Speed</button>
+                </div>
+            </div>
+        </div>
+        
+
+        <script>
+            function scanNetwork() {
+                fetch('/scan')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Scanned Hosts:', data);
+                        alert('Scan complete');
+                    });
+            }
+
+            function getTemperature() {
+                const ip = document.getElementById('ip').value;
+                fetch('/temperature', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ ip: ip })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Temperature:', data.temperature);
+                    alert('Temperature: ' + data.temperature);
+                });
+            }
+
+            function setFanSpeed() {
+                const speed = document.getElementById('speed').value;
+                fetch('/set_speed', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ speed: speed })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    alert('Fan speed set!');
+                });
+            }
+        </script>
+        <!-- Optional JavaScript -->
+        <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    
+    </body>
+</html>

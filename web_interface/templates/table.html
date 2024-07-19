@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Network Status</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-4">
+    <h1>Network Status</h1>
+
+    <form method="post" onsubmit="performScan(); return false;">
+        {{ form.hidden_tag() }}
+        {{ form.start_ip.label }} {{ form.start_ip() }}
+        {{ form.end_ip.label }} {{ form.end_ip() }}
+        <button type="submit">Scan Network</button>
+    </form>
+
+    <button class="btn btn-primary mb-3" onclick="updateTable()">Update Table</button>
+    <table class="table" id="hostsTable">
+        <thead class="thead-dark">
+            <tr>
+                <th>Host</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for host in hosts %}
+            <tr>
+                <td>{{ host.ip }}</td>
+                <!-- <td>{{ host.status }}</td> -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="{{ url_for('configure') }}" class="btn btn-link">Back to Configuration</a>
+</div>
+
+<script>
+    function performScan() {
+        fetch('/scan')
+        .then(response => response.json())
+        .then(data => {
+            const tableBody = document.getElementById('hostsTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = '';  // Clear existing rows
+            data.forEach(host => {
+                let row = tableBody.insertRow();
+                let cell1 = row.insertCell(0);
+                let cell2 = row.insertCell(1);
+                cell1.textContent    = host.ip;
+                // cell2.innerHTML = host.status;
+            });
+        })
+        .catch(error => console.error('Error updating table:', error));
+    }
+</script>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

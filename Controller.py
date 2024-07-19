@@ -30,7 +30,7 @@ from pyModbusTCP.client import ModbusClient
 
 IP_ADDRESS = '172.18.1.11'
 PORT = 502
-REGISTER = 5  # Hypothetical register for a non-critical setting
+REGISTER = 5  # speed value
 ORIGINAL_VALUE = 5  # Hypothetical safe value
 
 client = ModbusClient(host=IP_ADDRESS, port=PORT,unit_id=1, auto_open=True) 
