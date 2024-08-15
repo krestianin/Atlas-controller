@@ -50,13 +50,15 @@ def scan_network(start_ip, end_subnet, last_host_digit):
     active_hosts = []
     start = ipaddress.IPv4Address(start_ip)
     end_subnet = int(end_subnet.split('.')[2])  # 3 октет подсети
+    # sec_octet = int(end_subnet.split('.')[1])
+    sec_octet = 31
 
     # Проход по адресам 
     for third_octet in range(int(start_ip.split('.')[2]), end_subnet + 1):
-        end_ip = f"10.11.{third_octet}.{last_host_digit}"
+        end_ip = f"10.{sec_octet}.{third_octet}.{last_host_digit}"
         end = ipaddress.IPv4Address(end_ip)
         
-        current_ip = ipaddress.IPv4Address(f"10.11.{third_octet}.0")
+        current_ip = ipaddress.IPv4Address(f"10.{sec_octet}.{third_octet}.0")
         while current_ip <= end:
             try:
                 # Пинг IP адреса по TCP протоколу, порт 80
@@ -80,11 +82,11 @@ def set_fan_speed(fan_speed):
     PORT = 502
     REGISTER = 5  # Регистр 5 контролирует скорость вентилятора
     client = ModbusClient(host=IP_ADDRESS, port=PORT, unit_id=1, auto_open=True)
-    
-    if client.write_single_register(REGISTER, fan_speed):
-        print(f"Fan speed set to {fan_speed}.")
-    else:
-        print("Failed to write to register. Please check the connection and settings.")
+    print(fan_speed)
+    # if client.write_single_register(REGISTER, fan_speed):
+    #     print(f"Fan speed set to {fan_speed}.")
+    # else:
+    #     print("Failed to write to register. Please check the connection and settings.")
     client.close()
 
 

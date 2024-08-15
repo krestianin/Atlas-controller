@@ -9,7 +9,7 @@
 <div class="container mt-4">
     <h1>Network Status</h1>
 
-    <form method="post" onsubmit="performScan(); return false;">
+    <form method="post" onsubmit="performScan();">
         {{ form.hidden_tag() }}
         {{ form.start_ip.label }} {{ form.start_ip() }}
         {{ form.end_ip.label }} {{ form.end_ip() }}
@@ -37,22 +37,50 @@
 </div>
 
 <script>
-    function performScan() {
-        fetch('/scan')
-        .then(response => response.json())
-        .then(data => {
-            const tableBody = document.getElementById('hostsTable').getElementsByTagName('tbody')[0];
-            tableBody.innerHTML = '';  // Clear existing rows
-            data.forEach(host => {
-                let row = tableBody.insertRow();
-                let cell1 = row.insertCell(0);
-                let cell2 = row.insertCell(1);
-                cell1.textContent    = host.ip;
-                // cell2.innerHTML = host.status;
-            });
-        })
-        .catch(error => console.error('Error updating table:', error));
-    }
+function performScan() {
+    event.preventDefault();  // Prevent the default form submission
+    const formData = new FormData(document.querySelector('form'));
+
+    fetch('/table', {  
+    method: 'POST',
+    body: formData,
+    // redirect: 'manual'  // This will stop fetch from following redirects
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to submit IPs');
+        console.log(response);
+        return response.text();  // If it might not be JSON, use .text() first to see what's coming back
+    })
+    .then(text => {
+        console.log(text);  // Log the text to see what you received, then decide how to parse it
+    })
+    // .catch(error => console.error('Error during operation:', error));
+
+    .then(data => {
+        console.log('IPs submitted successfully, starting scan...');
+        // Now fetch the scan results
+        // console.log(data)
+        return fetch('/scan');
+    })
+    .then(response => response.json())
+    .then(data => {
+
+        // Update the table with the scan results
+        const tableBody = document.getElementById('hostsTable').getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = '';  // Clear existing rows
+        console.log('hosts' + data)
+        data.forEach(host => {        
+
+            let row = tableBody.insertRow();
+            let cell1 = row.insertCell(0);
+            let cell2 = row.insertCell(1);
+            cell1.textContent = host.ip;
+            cell2.textContent = host.status;
+        });
+    })
+    .catch(error => console.error('Error during operation:', error));
+}
+
 </script>
 
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>

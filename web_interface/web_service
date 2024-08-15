@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template
-from Service import scan_network, fetch_temperature, set_fan_speed  # Adjust imports based on your actual script setup
+from Service import scan_network, fetch_temperature, set_fan_speed 
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_wtf import FlaskForm
@@ -123,7 +123,8 @@ def monitor():
     last_host_digit = settings.get('last_host_digit', 70)  # Default last host digit
 
     hosts = scan_network(start_ip, end_subnet, last_host_digit)  # Adjust your scan_network function to handle the range directly
-    session['hosts'] = ['10.11.1.42', '10.11.1.43']   # change
+    session['hosts'] = hosts 
+    # ['10.11.1.42', '10.11.1.43']   # change
 
     # Fetch temperatures from the active hosts
     temperatures = [fetch_temperature(host) for host in hosts if host]
@@ -160,22 +161,34 @@ def monitor_status():
 @app.route('/table', methods=['GET', 'POST'])
 def table():
     form = NetworkScanForm()
-    if form.validate_on_submit():
-        start_ip = form.start_ip.data
-        end_ip = form.end_ip.data
-        # Store these for access by the AJAX call
-        session['start_ip'] = start_ip
-        session['end_ip'] = end_ip
-        return redirect(url_for('table'))  # Stay on the page to show the table
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            # Process form data and handle it via AJAX
+            start_ip = form.start_ip.data
+            end_ip = form.end_ip.data
+            session['start_ip'] = start_ip
+            session['end_ip'] = end_ip
+            # Perform the scanning
+            # hosts = scan_network(start_ip, end_ip, 45)  # Adjust the last parameter as needed
+            # Return JSON data to update the table dynamically
+            return jsonify(), 200
+        else:
+            # If form data is invalid, return an error in JSON
+            return jsonify({'error': 'Form validation failed'}), 400
+    # For GET requests, render the form page
     return render_template('table.html', form=form)
+
 
 @app.route('/scan', methods=['GET'])
 def scan():
-    # Example endpoint to initiate scanning
     start_ip = session.get('start_ip')
     end_ip = session.get('end_ip')
-    hosts = scan_network('start_ip', '10.11.1', 45)
-    return jsonify(hosts)
+    print(start_ip, end_ip  )
+    if start_ip and end_ip:
+        hosts = scan_network(start_ip, '10.47.9', 5)  # This function needs to be defined to handle the actual scanning
+        print(hosts) 
+        return jsonify([{'ip': host, 'status': 'Active'} for host in hosts])  # Dummy data
+    return jsonify({'error': 'IP addresses not set'}), 400
 
 @app.route('/temperature', methods=['POST'])
 def temperature():
