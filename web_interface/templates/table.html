@@ -1,90 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Network Status</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-</head>
-<body>
-<div class="container mt-4">
-    <h1>Network Status</h1>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand">Monitoring App</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{ url_for('home') }}">Home <span class="sr-only">(current)</span></a>
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="{{ url_for('configure') }}">Fan Control <span class="sr-only">(current)</span></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('table') }}">Ping Status</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <head>
+        <meta charset="UTF-8">
+        <title>Network Status</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    </head>
+    <body>
+        <div class="container mt-4">
+            <h1>Network Status</h1>
 
-    <form method="post" onsubmit="performScan();">
-        {{ form.hidden_tag() }}
-        {{ form.start_ip.label }} {{ form.start_ip() }}
-        {{ form.end_ip.label }} {{ form.end_ip() }}
-        <button type="submit">Scan Network</button>
-    </form>
+            <form method="post" onsubmit="performScan();">
+                {{ form.hidden_tag() }}
+                {{ form.start_ip.label }} {{ form.start_ip() }}
+                {{ form.end_ip.label }} {{ form.end_ip() }}
+                <button type="submit">Scan Network</button>
+            </form>
 
-    <button class="btn btn-primary mb-3" onclick="updateTable()">Update Table</button>
-    <table class="table" id="hostsTable">
-        <thead class="thead-dark">
-            <tr>
-                <th>Host</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for host in hosts %}
-            <tr>
-                <td>{{ host.ip }}</td>
-                <!-- <td>{{ host.status }}</td> -->
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <a href="{{ url_for('configure') }}" class="btn btn-link">Back to Configuration</a>
-</div>
+            <button class="btn btn-primary mb-3" onclick="updateTable()">Update Table</button>
+            <table class="table" id="hostsTable">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Host</th>
+                        <th>Status</th>
+                        <th>Temperature</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for host in table_data %}
+                    <tr>
+                        <td>{{ host.ip }}</td>
+                        <td>{{ host.status }}</td>
+                        <td>{{ host.temperature }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="{{ url_for('configure') }}" class="btn btn-link">Back to Configuration</a>
+        </div>
 
-<script>
-function performScan() {
-    event.preventDefault();  // Prevent the default form submission
-    const formData = new FormData(document.querySelector('form'));
+        <script>
+            function performScan() {
+                event.preventDefault();  // Prevent the default form submission
+                const formData = new FormData(document.querySelector('form'));
 
-    fetch('/table', {  
-    method: 'POST',
-    body: formData,
-    // redirect: 'manual'  // This will stop fetch from following redirects
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Failed to submit IPs');
-        console.log(response);
-        return response.text();  // If it might not be JSON, use .text() first to see what's coming back
-    })
-    .then(text => {
-        console.log(text);  // Log the text to see what you received, then decide how to parse it
-    })
-    // .catch(error => console.error('Error during operation:', error));
+                fetch('/table', {  
+                method: 'POST',
+                body: formData,
+                // redirect: 'manual'  // This will stop fetch from following redirects
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to submit IPs');
+                    console.log(response);
+                    return response.text();  // If it might not be JSON, use .text() first to see what's coming back
+                })
+                .then(text => {
+                    console.log(text);  // Log the text to see what you received, then decide how to parse it
+                })
+                // .catch(error => console.error('Error during operation:', error));
 
-    .then(data => {
-        console.log('IPs submitted successfully, starting scan...');
-        // Now fetch the scan results
-        // console.log(data)
-        return fetch('/scan');
-    })
-    .then(response => response.json())
-    .then(data => {
+                .then(data => {
+                    console.log('IPs submitted successfully, starting scan...');
+                    // Now fetch the scan results
+                    // console.log(data)
+                    return fetch('/scan');
+                })
+                .then(response => response.json())
+                .then(data => {
 
-        // Update the table with the scan results
-        const tableBody = document.getElementById('hostsTable').getElementsByTagName('tbody')[0];
-        tableBody.innerHTML = '';  // Clear existing rows
-        console.log('hosts' + data)
-        data.forEach(host => {        
+                    // Update the table with the scan results
+                    const tableBody = document.getElementById('hostsTable').getElementsByTagName('tbody')[0];
+                    tableBody.innerHTML = '';  // Clear existing rows
+                    data.forEach(host => {        
+                        let row = tableBody.insertRow();
+                        let cell1 = row.insertCell(0);
+                        let cell2 = row.insertCell(1);
+                        let cell3 = row.insertCell(2);
+                        cell1.textContent = host.ip;
+                        cell2.textContent = host.status;
+                        cell3.textContent = host.temperature;
+                        
+                    });
+                })
+                .catch(error => console.error('Error during operation:', error));
+            }
 
-            let row = tableBody.insertRow();
-            let cell1 = row.insertCell(0);
-            let cell2 = row.insertCell(1);
-            cell1.textContent = host.ip;
-            cell2.textContent = host.status;
-        });
-    })
-    .catch(error => console.error('Error during operation:', error));
-}
+            function updateTable() {
+                const tableData = [];
+                document.querySelectorAll('#hostsTable tbody tr').forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    tableData.push({
+                        ip: cells[0].textContent,
+                        status: cells[1].textContent,
+                        temperature: cells[2].textContent
+                    });
+                });
 
-</script>
+                // Send this data to the server to save it in the session
+                fetch('/save_table', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(tableData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Table saved:', data);
+                    alert('Table data successfully saved!');
+                })
+                .catch(error => {
+                    console.error('Error saving table:', error);
+                    alert('Failed to save table data.');
+                });
+            }
 
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-</body>
+        </script>
+
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    </body>
 </html>
