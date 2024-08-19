@@ -11,8 +11,8 @@ app.config['SECRET_KEY'] = 'your_secret_key'  # Change to a real secret key in p
 
 default_settings = {
     "start_ip": '10.11.1.42',
-    "end_subnet": '10.11.6',
-    "last_host_digit": 70,
+    "end_ip": '10.11.1.45',
+    # "last_host_digit": 70,
     "temp_low": 55,
     "temp_high": 63,
     "fan_speed_low": 3,
@@ -21,9 +21,10 @@ default_settings = {
 }
 
 class FanControlForm(FlaskForm):
+    controller_ip = StringField('Controller IP Address', validators=[DataRequired(), IPAddress()])
     start_ip = StringField('Start IP', validators=[DataRequired(), IPAddress()])
-    end_subnet = StringField('End Subnet IP', validators=[DataRequired()])
-    last_host_digit = IntegerField('Last Host Digit', validators=[DataRequired()])  # Ensure this line is included
+    end_ip = StringField('End IP', validators=[DataRequired()])
+    # last_host_digit = IntegerField('Last Host Digit', validators=[DataRequired()])  # Ensure this line is included
     # hosts = StringField('Hosts (comma-separated IPs)', validators=[DataRequired()])
     temp_low = IntegerField('Temperature Low Threshold (°C)', validators=[DataRequired()])
     temp_high = IntegerField('Temperature High Threshold (°C)', validators=[DataRequired()])
@@ -116,6 +117,7 @@ def ping_status():
 def monitor():
     # Retrieve settings from session, ensuring some default values if none found
     settings = session.get('settings', {
+        'controller_ip': '172.18.2.6',  
         'temp_high': 63,  # Default high temperature threshold
         'temp_low': 55,   # Default low temperature threshold
         'fan_speed_normal': 3,  # Default normal fan speed
@@ -125,10 +127,11 @@ def monitor():
 
     # Fetch IP range and scan network
     start_ip = settings.get('start_ip', '10.11.1.42')  # Default start IP
-    end_subnet = settings.get('end_subnet', '10.11.1')
-    last_host_digit = settings.get('last_host_digit', 70)  # Default last host digit
+    end_ip = settings.get('end_ip', '10.11.1.45')
+    controller_ip = settings.get('controller_ip', '172.18.2.6')
+    # last_host_digit = settings.get('last_host_digit', 70)  # Default last host digit
 
-    hosts = scan_network(start_ip, end_subnet, last_host_digit)  # Adjust your scan_network function to handle the range directly
+    hosts = scan_network(start_ip, end_ip)  # Adjust your scan_network function to handle the range directly
     session['hosts'] = hosts 
     # ['10.11.1.42', '10.11.1.43']   # change
 
@@ -150,7 +153,7 @@ def monitor():
         fan_speed = settings['fan_speed_normal']
 
     # Set the fan speed using the determined value
-    set_fan_speed(fan_speed)
+    set_fan_speed(fan_speed, controller_ip)
 
     session['last_fan_speed'] = fan_speed  # Store the last set fan speed in the session
     # Return the results as JSON
@@ -194,7 +197,7 @@ def scan():
     end_ip = session.get('end_ip')
     print(start_ip, end_ip  )
     if start_ip and end_ip:
-        hosts = scan_network(start_ip, end_ip, 70)  # This function needs to be defined to handle the actual scanning
+        hosts = scan_network(start_ip, end_ip)  
         return jsonify([{'ip': host, 'status': 'Active', 'temperature': str(fetch_temperature(host))} for host in hosts]) 
     return jsonify({'error': 'IP addresses not set'}), 400
 

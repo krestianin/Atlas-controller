@@ -45,7 +45,7 @@ def ping_host(ip):
     
 
 # Скан сети для поиска рабочих адрессов от start_ip до end_ip, проверяя адреса вплоть до 10.11.х.last_host_digit
-def scan_network(start_ip, end_ip, last_host_digit):
+def scan_network(start_ip, end_ip):
     """ Scan a custom IP range up to the last_host_digit in each subnet. """
     active_hosts = []
     start = ipaddress.IPv4Address(start_ip)
@@ -78,11 +78,11 @@ def scan_network(start_ip, end_ip, last_host_digit):
 
 
 # Функция, чтобы настроить скорость вентилятора
-def set_fan_speed(fan_speed):
-    IP_ADDRESS = '172.18.1.11' # IP контроллера 
+def set_fan_speed(fan_speed, controler_ip):
+    # IP_ADDRESS = '172.18.1.11' # IP контроллера 
     PORT = 502
     REGISTER = 5  # Регистр 5 контролирует скорость вентилятора
-    client = ModbusClient(host=IP_ADDRESS, port=PORT, unit_id=1, auto_open=True)
+    client = ModbusClient(host=controler_ip, port=PORT, unit_id=1, auto_open=True)
     print(fan_speed)
     # if client.write_single_register(REGISTER, fan_speed):
     #     print(f"Fan speed set to {fan_speed}.")

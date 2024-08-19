@@ -28,33 +28,34 @@
     </head>
     <body>
         <h1  style="padding: 20px; padding-left: 43%;">Fan Speed Controller</h1>
-
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
         <div class="container mt-5">
             <h1 class="mb-4">Configure Temperature Thresholds and Fan Speeds</h1>
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    <ul>
-                    {% for message in messages %}
-                        <li>{{ message }}</li>
-                    {% endfor %}
-                    </ul>
-                {% endif %}
-            {% endwith %}
+          
             <form method="post" class="needs-validation" novalidate>
                 {{ form.hidden_tag() }}
                 <div class="form-row">
+                    <div class="form-group">
+                        {{ form.controller_ip.label(class="form-label") }}
+                        {{ form.controller_ip(class="form-control") }}
+                    </div>
                     <div class="form-group">
                         {{ form.start_ip.label(class="form-label") }}
                         {{ form.start_ip(class="form-control") }}
                     </div>
                     <div class="form-group">
-                        {{ form.end_subnet.label(class="form-label") }}
-                        {{ form.end_subnet(class="form-control") }}
+                        {{ form.end_ip.label(class="form-label") }}
+                        {{ form.end_ip(class="form-control") }}
                     </div>
-                    <div class="form-group">
-                        {{ form.last_host_digit.label(class="form-label") }}
-                        {{ form.last_host_digit(class="form-control") }}
-                    </div>
+        
                     <div class="form-group col-md-6">
                         {{ form.temp_low.label(class="form-label") }}
                         {{ form.temp_low(class="form-control", required=True) }}
