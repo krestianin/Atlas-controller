@@ -1,10 +1,9 @@
 from flask import Flask, request, jsonify, render_template
-from Service import scan_network, fetch_temperature, set_fan_speed 
-
+from Service import scan_network, fetch_temperature, set_fan_speed, save_to_json,load_configurations 
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_wtf import FlaskForm
-from wtforms import IntegerField, SubmitField, StringField
-from wtforms.validators import DataRequired, IPAddress
+from wtforms import IntegerField, SelectField, SubmitField, StringField
+from wtforms.validators import DataRequired, IPAddress, Optional
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'  # Change to a real secret key in production
@@ -22,6 +21,10 @@ default_settings = {
 }
 
 class FanControlForm(FlaskForm):
+    # controller_select = SelectField('Choose a Configuration (Optional)', coerce=StringField, choices=[(0, 'None')], validators=[])
+    controller_select = SelectField('Choose a Configuration (Optional)', coerce=str, choices=[], validators=[Optional()])
+
+    # controller_select = SelectField('Choose a Configuration (Optional)', coerce=str, choices=[])
     controller_ip = StringField('Controller IP Address', validators=[DataRequired(), IPAddress()])
     start_ip = StringField('Start IP', validators=[DataRequired(), IPAddress()])
     end_ip = StringField('End IP', validators=[DataRequired()])
@@ -85,12 +88,23 @@ class NetworkScanForm(FlaskForm):
 @app.route('/configure', methods=['GET', 'POST'])
 def configure():
     form = FanControlForm()
+
+    configurations = load_configurations()  # This should fetch a list of configurations
+    form.controller_select.choices = [(config['controller_ip'], config['controller_ip']) for config in configurations]
+
+
     if form.validate_on_submit():
+        if 'save' in request.form:
+            return save_config(form)
+        # elif 'load' in request.form:
+        #     selected_config = json.loads(form.controller_select.data)
+        #     form.process(data=selected_config)  # Pre-fill form with selected configuration
         # Store the form data in the session
         session['settings'] = form.data  # This captures all form data
         flash('Configuration saved successfully! Starting monitoring...')
         return redirect(url_for('monitor'))
     
+    # print(session['settings'])
     # Pre-fill the form with session data if available, otherwise use defaults
     if 'settings' in session:
         form_data = session['settings']
@@ -189,7 +203,7 @@ def table():
     table_data = session.get('table_data', [])
     print(table_data)
     return render_template('table.html',form=form, table_data=table_data)
-    return render_template('table.html', form=form)
+    # return render_template('table.html', form=form)
 
 
 @app.route('/scan', methods=['GET'])
@@ -221,6 +235,45 @@ def speed():
     speed = request.json.get('speed')
     print(speed)
     return jsonify({'status': 'Speed set successfully'}, {'speed': speed})
+
+
+
+@app.route('/save_config', methods=['POST'])
+def save_config(form):
+    # form = FanControlForm()
+    # if form.validate_on_submit():
+    data = {
+        "controller_ip": form.controller_ip.data,
+        "start_ip": form.start_ip.data,
+        "end_ip": form.end_ip.data,
+        "temp_low": form.temp_low.data,
+        "temp_high": form.temp_high.data,
+        "fan_speed_low": form.fan_speed_low.data,
+        "fan_speed_normal": form.fan_speed_normal.data,
+        "fan_speed_high": form.fan_speed_high.data
+    }
+    if save_to_json(data):
+        session['settings'] = data 
+        flash('Configuration saved successfully!')
+        return redirect(url_for('configure'))
+    else:
+        flash('Failed to save configuration.')
+    return redirect(url_for('configure'))
+    # return render_template('index.html', form=form)
+
+@app.route('/get_config/<controller_ip>')
+def get_config(controller_ip):
+    configurations = load_configurations()
+    config_data = next((item for item in configurations if item.get('controller_ip') == controller_ip), None)
+    if config_data:
+        session['settings'] = config_data  # Store in session
+        flash('Configuration loaded successfully!')
+        return redirect(url_for('configure'))
+    else:
+        flash('Configuration not found', 'error')
+        return redirect(url_for('configure'))
+
+
 
 if __name__ == '__main__':  
     app.run(debug=True, host='0.0.0.0', port=5000)

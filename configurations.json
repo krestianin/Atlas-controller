@@ -1,0 +1,52 @@
+[
+    {
+        "controller_ip": "172.18.2.5",
+        "start_ip": "10.31.1.1",
+        "end_ip": "10.31.1.5",
+        "temp_low": 55,
+        "temp_high": 63,
+        "fan_speed_low": 3,
+        "fan_speed_normal": 4,
+        "fan_speed_high": 5
+    },
+    {
+        "controller_ip": "172.18.2.3",
+        "start_ip": "10.31.1.4",
+        "end_ip": "10.31.1.5",
+        "temp_low": 55,
+        "temp_high": 63,
+        "fan_speed_low": 3,
+        "fan_speed_normal": 4,
+        "fan_speed_high": 5
+    },
+    {
+        "controller_ip": "172.18.2.6",
+        "start_ip": "10.31.1.4",
+        "end_ip": "10.31.1.5",
+        "temp_low": 55,
+        "temp_high": 63,
+        "fan_speed_low": 3,
+        "fan_speed_normal": 4,
+        "fan_speed_high": 5
+    },
+    {
+        "controller_ip": "172.18.2.34",
+        "start_ip": "10.31.1.1",
+        "end_ip": "10.31.1.5",
+        "temp_low": 55,
+        "temp_high": 63,
+        "fan_speed_low": 3,
+        "fan_speed_normal": 4,
+        "fan_speed_high": 5
+    },
+    {
+        "controller_ip": "172.18.2.67",
+        "start_ip": "10.31.1.4",
+        "end_ip": "10.31.1.5",
+        "temp_low": 23,
+        "temp_high": 63,
+        "fan_speed_low": 12,
+        "fan_speed_normal": 4,
+        "fan_speed_high": 5
+    }
+]

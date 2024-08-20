@@ -29,14 +29,14 @@
     <body>
         <h1  style="padding: 20px; padding-left: 43%;">Fan Speed Controller</h1>
         {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <ul>
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
+            {% if messages %}
+                <ul>
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
         <div class="container mt-5">
             <h1 class="mb-4">Configure Temperature Thresholds and Fan Speeds</h1>
           
@@ -94,7 +94,17 @@
                         {% endfor %}
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary">Set Parameters</button>
+                <div class="form-group">
+                    <label for="controllerSelect">Controller IP (Optional)</label>
+                    <select id="controllerSelect" class="form-control" name="controller_select"  onchange="loadControllerData(); return false;">
+                        <option value="">Select a Controller IP</option>
+                        {% for value, label in form.controller_select.choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" name="set" class="btn btn-primary">Set Parameters</button>
+                <button type="submit" name="save" class="btn btn-success">Save Configuration</button>
             </form>
         </div>
        
@@ -166,6 +176,14 @@
                     console.log(data);
                     alert('Fan speed set!');
                 });
+            }
+            function loadControllerData() {
+                var select = document.getElementById('controllerSelect');
+                var controllerIP = select.value;
+
+                if (controllerIP) {
+                    window.location.href = '/get_config/' + controllerIP;  // Redirect to the server endpoint
+                }
             }
         </script>
         <!-- Optional JavaScript -->

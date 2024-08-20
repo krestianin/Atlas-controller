@@ -75,6 +75,48 @@ def scan_network(start_ip, end_ip):
     print(active_hosts)
     return active_hosts
 
+def load_configurations(filename='configurations.json'):
+    try:
+        with open(filename, 'r') as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+def save_to_json(data, filename='configurations.json'):
+    try:
+        # Try to read existing data from the file
+        try:
+            with open(filename, 'r') as f:
+                existing_data = json.load(f)
+            # Ensure the loaded data is a list
+            if not isinstance(existing_data, list):
+                existing_data = []
+        except (FileNotFoundError, json.JSONDecodeError):
+            # If the file doesn't exist or is empty/corrupt, start a new list
+            existing_data = []
+        
+        updated = False
+        for config in existing_data:
+            if config['controller_ip'] == data['controller_ip']:
+                config.update(data)  # Update the existing configuration
+                updated = True
+                break
+        
+        if not updated:
+            existing_data.append(data)
+
+        # Append the new data to the list of configurations
+        # existing_data.append(data)
+
+        # Write the updated list back to the file
+        with open(filename, 'w') as f:
+            json.dump(existing_data, f, indent=4)  # Indent for pretty printing
+
+        return True
+    except Exception as e:
+        print(f"Error saving to JSON: {e}")
+        return False
+
 
 
 # Функция, чтобы настроить скорость вентилятора
