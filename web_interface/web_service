@@ -1,3 +1,4 @@
+import json
 from flask import Flask, request, jsonify, render_template
 from Service import scan_network, fetch_temperature, set_fan_speed, save_to_json,load_configurations 
 from flask import Flask, render_template, request, redirect, url_for, flash, session
@@ -21,27 +22,34 @@ default_settings = {
 }
 
 class FanControlForm(FlaskForm):
-    # controller_select = SelectField('Choose a Configuration (Optional)', coerce=StringField, choices=[(0, 'None')], validators=[])
-    controller_select = SelectField('Choose a Configuration (Optional)', coerce=str, choices=[], validators=[Optional()])
-
-    # controller_select = SelectField('Choose a Configuration (Optional)', coerce=str, choices=[])
-    controller_ip = StringField('Controller IP Address', validators=[DataRequired(), IPAddress()])
-    start_ip = StringField('Start IP', validators=[DataRequired(), IPAddress()])
-    end_ip = StringField('End IP', validators=[DataRequired()])
-    # last_host_digit = IntegerField('Last Host Digit', validators=[DataRequired()])  # Ensure this line is included
-    # hosts = StringField('Hosts (comma-separated IPs)', validators=[DataRequired()])
-    temp_low = IntegerField('Temperature Low Threshold (°C)', validators=[DataRequired()])
-    temp_high = IntegerField('Temperature High Threshold (°C)', validators=[DataRequired()])
-    fan_speed_low = IntegerField('Fan Speed for Low Temp', validators=[DataRequired()])
-    fan_speed_high = IntegerField('Fan Speed for High Temp', validators=[DataRequired()])
-    fan_speed_normal = IntegerField('Fan Speed for Normal Temp', validators=[DataRequired()])
-    submit = SubmitField('Set Parameters')
+    # Выбор конфигурации (необязательно)
+    controller_select = SelectField('Выбрать конфигурацию (необязательно)', coerce=str, choices=[], validators=[Optional()])
+    # IP адрес контроллера
+    controller_ip = StringField('IP адрес контроллера', validators=[DataRequired(), IPAddress()])
+    # Начальный IP
+    start_ip = StringField('Начальный IP', validators=[DataRequired(), IPAddress()])
+    # Конечный IP
+    end_ip = StringField('Конечный IP', validators=[DataRequired()])
+    # Нижний порог температуры
+    temp_low = IntegerField('Нижний порог температуры (°C)', validators=[DataRequired()])
+    # Верхний порог температуры
+    temp_high = IntegerField('Верхний порог температуры (°C)', validators=[DataRequired()])
+    # Скорость вентилятора для низкой температуры
+    fan_speed_low = IntegerField('Скорость для низкой температуры', validators=[DataRequired()])
+    # Скорость вентилятора для высокой температуры
+    fan_speed_high = IntegerField('Скорость для высокой температуры', validators=[DataRequired()])
+    # Скорость вентилятора для нормальной температуры
+    fan_speed_normal = IntegerField('Скорость для нормальной температуры', validators=[DataRequired()])
+    # Установить параметры
+    submit = SubmitField('Установить параметры')
 
 class NetworkScanForm(FlaskForm):
-    start_ip = StringField('Start IP Address', validators=[DataRequired(), IPAddress()])
-    end_ip = StringField('End IP Address', validators=[DataRequired(), IPAddress()])
-    submit = SubmitField('Scan Network')
-
+    # Начальный IP адрес
+    start_ip = StringField('Начальный IP адрес', validators=[DataRequired(), IPAddress()])
+    # Конечный IP адрес
+    end_ip = StringField('Конечный IP адрес', validators=[DataRequired()])
+    # Сканировать сеть
+    submit = SubmitField('Сканировать сеть')
 # @app.route('/', methods=['GET', 'POST'])
 # def index():
 #     form = FanControlForm()
@@ -220,6 +228,7 @@ def scan():
 def save_table():
     data = request.get_json()
     session['table_data'] = data
+    save_to_json(data, "table.json")
     return jsonify({"message": "Table data saved successfully"})
 
 @app.route('/temperature', methods=['POST'])
@@ -252,7 +261,7 @@ def save_config(form):
         "fan_speed_normal": form.fan_speed_normal.data,
         "fan_speed_high": form.fan_speed_high.data
     }
-    if save_to_json(data):
+    if save_to_json(data, "configurations.json"):
         session['settings'] = data 
         flash('Configuration saved successfully!')
         return redirect(url_for('configure'))
@@ -263,7 +272,7 @@ def save_config(form):
 
 @app.route('/get_config/<controller_ip>')
 def get_config(controller_ip):
-    configurations = load_configurations()
+    configurations = load_configurations("configurations.json")
     config_data = next((item for item in configurations if item.get('controller_ip') == controller_ip), None)
     if config_data:
         session['settings'] = config_data  # Store in session

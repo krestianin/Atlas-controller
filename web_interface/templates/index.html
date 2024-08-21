@@ -8,20 +8,20 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
                 <li class="nav-item active">
-                    <a class="nav-link" href="{{ url_for('home') }}">Home <span class="sr-only">(current)</span></a>
+                    <a class="nav-link" href="{{ url_for('home') }}">Домой<span class="sr-only">(current)</span></a>
                 </li>
                 <li class="nav-item active">
-                    <a class="nav-link" href="{{ url_for('configure') }}">Fan Control <span class="sr-only">(current)</span></a>
+                    <a class="nav-link" href="{{ url_for('configure') }}">Контроллер <span class="sr-only">(current)</span></a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('table') }}">Ping Status</a>
+                    <a class="nav-link" href="{{ url_for('table') }}">Таблица</a>
                 </li>
             </ul>
         </div>
     </nav>
     <head>
         <meta charset="UTF-8">
-        <title>Fan Speed Control Setup</title>
+        <title>Контроллер скорости вентилятора</title>
         <!-- Include Bootstrap CSS from CDN -->
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -38,7 +38,7 @@
             {% endif %}
         {% endwith %}
         <div class="container mt-5">
-            <h1 class="mb-4">Configure Temperature Thresholds and Fan Speeds</h1>
+            <h1 class="mb-4">Настройка порогов температуры и скорости вентиляторов</h1>
           
             <form method="post" class="needs-validation" novalidate>
                 {{ form.hidden_tag() }}
@@ -95,42 +95,58 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="controllerSelect">Controller IP (Optional)</label>
+                    <label for="controllerSelect">Выбрать существующий IP-адрес контроллера</label>
                     <select id="controllerSelect" class="form-control" name="controller_select"  onchange="loadControllerData(); return false;">
-                        <option value="">Select a Controller IP</option>
+                        <option value="">Выберите IP-адрес контроллера</option>
                         {% for value, label in form.controller_select.choices %}
                         <option value="{{ value }}">{{ label }}</option>
+                        <button onclick="event.stopPropagation(); deleteConfiguration('{{ value }}');" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash"></i>
+                        </button>
                         {% endfor %}
                     </select>
                 </div>
-                <button type="submit" name="set" class="btn btn-primary">Set Parameters</button>
-                <button type="submit" name="save" class="btn btn-success">Save Configuration</button>
+                <!-- <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Select a Controller IP
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                        {% for value, label in form.controller_select.choices %}
+                        <div id="controllerSelect" class="dropdown-item d-flex justify-content-between align-items-center">
+                            <span onclick="loadControllerData();">{{ label }}</span>
+                         
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div> -->
+                <button type="submit" name="set" class="btn btn-primary">Задать параметры</button>
+                <button type="submit" name="save" class="btn btn-success">Сохранить конфигурацию</button>
             </form>
         </div>
        
 
 
         <div class="container mt-5">
-            <h2 class="mb-3">Network Operations</h2>
+            <h2 class="mb-3">Операции в сети</h2>
             <div class="row mb-3">
                 <div class="col-md-12">
-                    <button class="btn btn-primary" onclick="scanNetwork()">Scan Network</button>
+                    <button class="btn btn-primary" onclick="scanNetwork()">Сканировать сеть</button>
                 </div>
             </div>
             <div class="row mb-3">
                 <div class="col-md-6">
-                    <input type="text" id="ip" placeholder="Enter IP" class="form-control">
+                    <input type="text" id="ip" placeholder="Введите IP" class="form-control">
                 </div>
                 <div class="col-md-6">
-                    <button class="btn btn-success" onclick="getTemperature()">Get Temperature</button>
+                    <button class="btn btn-success" onclick="getTemperature()">Получить температуру</button>
                 </div>
             </div>
             <div class="row mb-3">
                 <div class="col-md-6">
-                    <input type="number" id="speed" placeholder="Set Fan Speed" class="form-control">
+                    <input type="number" id="speed" placeholder="Введите скорость" class="form-control">
                 </div>
                 <div class="col-md-6">
-                    <button class="btn btn-warning" onclick="setFanSpeed()">Set Fan Speed</button>
+                    <button class="btn btn-warning" onclick="setFanSpeed()">Установить скорость вентилятора</button>
                 </div>
             </div>
         </div>
@@ -142,7 +158,7 @@
                     .then(response => response.json())
                     .then(data => {
                         console.log('Scanned Hosts:', data);
-                        alert('Scan complete');
+                        alert('Сканирование завершено');
                     });
             }
 
@@ -158,7 +174,7 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log('Temperature:', data.temperature);
-                    alert('Temperature: ' + data.temperature);
+                    alert('Температура: ' + data.temperature);
                 });
             }
 
@@ -174,7 +190,7 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log(data);
-                    alert('Fan speed set!');
+                    alert('Скорость вентилятора установлена!');
                 });
             }
             function loadControllerData() {
@@ -185,6 +201,22 @@
                     window.location.href = '/get_config/' + controllerIP;  // Redirect to the server endpoint
                 }
             }
+            function deleteConfiguration(controllerIP) {
+            event.stopPropagation();  // Prevent dropdown from closing
+            if (confirm('Are you sure you want to delete the configuration for ' + controllerIP + '?')) {
+                fetch('/delete-config/' + controllerIP, { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Configuration deleted successfully.');
+                            window.location.reload();  // Reload the page to update the dropdown
+                        } else {
+                            alert('Error deleting configuration.');
+                        }
+                    })
+                    .catch(error => console.error('Error during deletion:', error));
+            }
+}
         </script>
         <!-- Optional JavaScript -->
         <!-- jQuery first, then Popper.js, then Bootstrap JS -->

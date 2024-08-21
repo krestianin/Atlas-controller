@@ -1,0 +1,29 @@
+[
+    [
+        {
+            "ip": "10.31.1.1",
+            "status": "Active",
+            "temperature": "71"
+        },
+        {
+            "ip": "10.31.1.2",
+            "status": "Active",
+            "temperature": "78"
+        },
+        {
+            "ip": "10.31.1.3",
+            "status": "Active",
+            "temperature": "74"
+        },
+        {
+            "ip": "10.31.1.4",
+            "status": "Active",
+            "temperature": "78"
+        },
+        {
+            "ip": "10.31.1.5",
+            "status": "Active",
+            "temperature": "68"
+        }
+    ]
+]
