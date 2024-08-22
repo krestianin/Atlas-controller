@@ -87,7 +87,7 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-
+                    alert('Скан завершен!');
                     // Update the table with the scan results
                     const tableBody = document.getElementById('hostsTable').getElementsByTagName('tbody')[0];
                     tableBody.innerHTML = '';  // Clear existing rows
@@ -132,11 +132,11 @@
                 })
                 .then(data => {
                     console.log('Table saved:', data);
-                    alert('Table data successfully saved!');
+                    alert('Tаблица сохранена!');
                 })
                 .catch(error => {
                     console.error('Error saving table:', error);
-                    alert('Failed to save table data.');
+                    alert('Не удалось сохранить таблицу.');
                 });
             }
 

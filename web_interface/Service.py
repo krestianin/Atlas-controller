@@ -13,6 +13,8 @@ def fetch_temperature(host):
 
     # Получение данных с асика по порту port
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.5)  # Timeout for the socket operation
+
         s.connect((host, port))
         s.sendall(json.dumps(command).encode())
         response = b""
@@ -31,6 +33,26 @@ def fetch_temperature(host):
     max_temp = max(temperatures) if temperatures else None
     return max_temp
 
+def fetch_connected_temperature(s, host):
+    # This function now accepts an already connected socket `s`
+    port = 4028  # Port number typically used for ASIC miners
+    command = {"id": 0, "jsonrpc": "2.0", "command": "stats"}
+    try:
+        s.sendall(json.dumps(command).encode())
+        response = b""
+        while True:
+            part = s.recv(4096)
+            if not part:
+                break
+            response += part
+        response = response.decode('utf-8')
+        temperatures = re.findall(r'"temp\d+": (\d+)', response)
+        temperatures = [int(temp) for temp in temperatures]
+        return max(temperatures) if temperatures else None
+    except Exception as e:
+        print(f"Error fetching temperature for {host}: {e}")
+        return None
+
 # Пинг IP адреса. Функция не используется 
 def ping_host(ip):
     try:
@@ -48,32 +70,35 @@ def ping_host(ip):
 def scan_network(start_ip, end_ip):
     """ Scan a custom IP range up to the last_host_digit in each subnet. """
     active_hosts = []
-    start = ipaddress.IPv4Address(start_ip)
+    temps = []
+    start_last_host_digit = int(start_ip.split('.')[3])
     last_host_digit = int(end_ip.split('.')[3]) 
     # sec_octet = int(end_subnet.split('.')[1]) # 2 октет подсети
     end_subnet = int(end_ip.split('.')[2])  # 3 октет подсети
-    print(last_host_digit)
     # Проход по адресам 
     for sec_octet in range(int(start_ip.split('.')[1]), int(end_ip.split('.')[1]) + 1):
         for third_octet in range(int(start_ip.split('.')[2]), end_subnet + 1):
             end_ip = f"10.{sec_octet}.{third_octet}.{last_host_digit}"
             end = ipaddress.IPv4Address(end_ip)
             
-            current_ip = ipaddress.IPv4Address(f"10.{sec_octet}.{third_octet}.0")
+            current_ip = ipaddress.IPv4Address(f"10.{sec_octet}.{third_octet}.{start_last_host_digit}")
             while current_ip <= end:
                 try:
                     # Пинг IP адреса по TCP протоколу, порт 80
-                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                        s.settimeout(0.5)  # Timeout for the socket operation
+                    # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    #     s.settimeout(0.5)  # Timeout for the socket operation
 
-                        if s.connect_ex((str(current_ip), 80)) == 0:
-                            active_hosts.append(str(current_ip))
-                            print(f"Host {current_ip} is active.")
+                    #     if s.connect_ex((str(current_ip), 80)) == 0:
+                    temp = fetch_temperature(str(current_ip))
+                    if temp is not None:
+                        temps.append(temp)
+                        active_hosts.append(str(current_ip))
+                        print(f"Host {current_ip} is active.")
                 except Exception as e:
                     print(f"Failed to connect to {current_ip}: {e}")
                 current_ip = ipaddress.IPv4Address(int(current_ip) + 1)
-    print(active_hosts)
-    return active_hosts
+    print(active_hosts, temps)
+    return active_hosts, temps
 
 def load_configurations(filename='configurations.json'):
     try:
@@ -125,11 +150,10 @@ def set_fan_speed(fan_speed, controler_ip):
     PORT = 502
     REGISTER = 5  # Регистр 5 контролирует скорость вентилятора
     client = ModbusClient(host=controler_ip, port=PORT, unit_id=1, auto_open=True)
-    print(fan_speed)
-    # if client.write_single_register(REGISTER, fan_speed):
-    #     print(f"Fan speed set to {fan_speed}.")
-    # else:
-    #     print("Failed to write to register. Please check the connection and settings.")
+    if client.write_single_register(REGISTER, fan_speed):
+        print(f"Fan speed set to {fan_speed}.")
+    else:
+        print("Failed to write to register. Please check the connection and settings.")
     client.close()
 
 

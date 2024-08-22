@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, render_template
 from Service import scan_network, fetch_temperature, set_fan_speed, save_to_json,load_configurations 
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_wtf import FlaskForm
-from wtforms import IntegerField, SelectField, SubmitField, StringField
+from wtforms import IntegerField, SelectField, SubmitField, StringField, BooleanField
 from wtforms.validators import DataRequired, IPAddress, Optional
 
 app = Flask(__name__)
@@ -18,7 +18,8 @@ default_settings = {
     "temp_high": 63,
     "fan_speed_low": 3,
     "fan_speed_high": 5,
-    "fan_speed_normal": 4
+    "fan_speed_normal": 4,
+    "enable_feature": True
 }
 
 class FanControlForm(FlaskForm):
@@ -40,6 +41,7 @@ class FanControlForm(FlaskForm):
     fan_speed_high = IntegerField('Скорость для высокой температуры', validators=[DataRequired()])
     # Скорость вентилятора для нормальной температуры
     fan_speed_normal = IntegerField('Скорость для нормальной температуры', validators=[DataRequired()])
+    enable_feature = BooleanField('Режим эмуляции') 
     # Установить параметры
     submit = SubmitField('Установить параметры')
 
@@ -109,7 +111,7 @@ def configure():
         #     form.process(data=selected_config)  # Pre-fill form with selected configuration
         # Store the form data in the session
         session['settings'] = form.data  # This captures all form data
-        flash('Configuration saved successfully! Starting monitoring...')
+        flash('Конфигурация сохранена! Начало мониторинга...')
         return redirect(url_for('monitor'))
     
     # print(session['settings'])
@@ -145,21 +147,23 @@ def monitor():
         'temp_low': 55,   # Default low temperature threshold
         'fan_speed_normal': 3,  # Default normal fan speed
         'fan_speed_high': 5,    # Default high fan speed
-        'fan_speed_low': 4      # Default low fan speed
+        'fan_speed_low': 4,      # Default low fan speed
+        'enable_feature': True
     })
 
+    enable_feature = settings.get('enable_feature', 'True')
     # Fetch IP range and scan network
     start_ip = settings.get('start_ip', '10.11.1.42')  # Default start IP
     end_ip = settings.get('end_ip', '10.11.1.45')
     controller_ip = settings.get('controller_ip', '172.18.2.6')
     # last_host_digit = settings.get('last_host_digit', 70)  # Default last host digit
 
-    hosts = scan_network(start_ip, end_ip)  # Adjust your scan_network function to handle the range directly
+    hosts, temperatures = scan_network(start_ip, end_ip)  # Adjust your scan_network function to handle the range directly
     session['hosts'] = hosts 
     # ['10.11.1.42', '10.11.1.43']   # change
 
     # Fetch temperatures from the active hosts
-    temperatures = [fetch_temperature(host) for host in hosts if host]
+    # temperatures = [fetch_temperature(host) for host in hosts if host]
     
     if not temperatures:
         return jsonify({'error': 'No valid temperature data found'}), 400
@@ -176,11 +180,13 @@ def monitor():
         fan_speed = settings['fan_speed_normal']
 
     # Set the fan speed using the determined value
-    set_fan_speed(fan_speed, controller_ip)
+    if(not enable_feature):
+        set_fan_speed(fan_speed, controller_ip)
 
     session['last_fan_speed'] = fan_speed  # Store the last set fan speed in the session
-    # Return the results as JSON
-    flash(f'Fan speed set to {fan_speed}. Monitoring updated.')
+    
+    flash(f'Средняя температура в дипазоне: {average_temp}')
+    flash(f'Заданная скорость вентилятора: {fan_speed}')
     return redirect(url_for('configure'))
 
 @app.route('/monitor_status')
@@ -209,7 +215,6 @@ def table():
             return jsonify({'error': 'Form validation failed'}), 400
     # For GET requests, render the form page
     table_data = session.get('table_data', [])
-    print(table_data)
     return render_template('table.html',form=form, table_data=table_data)
     # return render_template('table.html', form=form)
 
@@ -220,15 +225,20 @@ def scan():
     end_ip = session.get('end_ip')
     print(start_ip, end_ip  )
     if start_ip and end_ip:
-        hosts = scan_network(start_ip, end_ip)  
-        return jsonify([{'ip': host, 'status': 'Active', 'temperature': str(fetch_temperature(host))} for host in hosts]) 
+        hosts, temps = scan_network(start_ip, end_ip)  
+        data = [{'ip': host, 'status': 'Active', 'temperature': temp} for host, temp in zip(hosts, temps)]
+        session['table_data'] = data
+        return jsonify(data)
     return jsonify({'error': 'IP addresses not set'}), 400
 
 @app.route('/save_table', methods=['POST'])
 def save_table():
     data = request.get_json()
     session['table_data'] = data
-    save_to_json(data, "table.json")
+    print(data)
+    # save_to_json(data, "table.json")
+    with open("table.json", 'w') as f:
+        json.dump(data, f, indent=4) 
     return jsonify({"message": "Table data saved successfully"})
 
 @app.route('/temperature', methods=['POST'])
@@ -263,10 +273,10 @@ def save_config(form):
     }
     if save_to_json(data, "configurations.json"):
         session['settings'] = data 
-        flash('Configuration saved successfully!')
+        flash('Конфигурация сохранена!')
         return redirect(url_for('configure'))
     else:
-        flash('Failed to save configuration.')
+        flash('Ошибка сохранения конфигурации.')
     return redirect(url_for('configure'))
     # return render_template('index.html', form=form)
 
@@ -276,10 +286,10 @@ def get_config(controller_ip):
     config_data = next((item for item in configurations if item.get('controller_ip') == controller_ip), None)
     if config_data:
         session['settings'] = config_data  # Store in session
-        flash('Configuration loaded successfully!')
+        flash('Конфигурация загружена!')
         return redirect(url_for('configure'))
     else:
-        flash('Configuration not found', 'error')
+        flash('Конфигурация не найдена', 'error')
         return redirect(url_for('configure'))
 
 

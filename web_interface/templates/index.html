@@ -54,8 +54,7 @@
                     <div class="form-group">
                         {{ form.end_ip.label(class="form-label") }}
                         {{ form.end_ip(class="form-control") }}
-                    </div>
-        
+                    </div>        
                     <div class="form-group col-md-6">
                         {{ form.temp_low.label(class="form-label") }}
                         {{ form.temp_low(class="form-control", required=True) }}
@@ -121,6 +120,12 @@
                 </div> -->
                 <button type="submit" name="set" class="btn btn-primary">Задать параметры</button>
                 <button type="submit" name="save" class="btn btn-success">Сохранить конфигурацию</button>
+                <div class="form-group">
+                    {{ form.enable_feature.label(class="form-check-label") }}
+                    <div class="form-check">
+                        {{ form.enable_feature(class="form-check-input") }}
+                    </div>
+                </div>
             </form>
         </div>
        

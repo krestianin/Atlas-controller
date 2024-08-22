@@ -21,7 +21,7 @@
     },
     {
         "controller_ip": "172.18.2.6",
-        "start_ip": "10.31.1.4",
+        "start_ip": "10.31.1.1",
         "end_ip": "10.31.1.5",
         "temp_low": 55,
         "temp_high": 63,
